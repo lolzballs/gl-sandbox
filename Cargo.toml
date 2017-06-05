@@ -1,0 +1,8 @@
+[package]
+name = "hexgame"
+version = "0.1.0"
+authors = ["Benjamin Cheng <ben@bcheng.cf>"]
+
+[dependencies]
+gl = "0.6"
+sdl2 = "0.30"
