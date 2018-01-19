@@ -2,21 +2,24 @@ extern crate cgmath;
 extern crate gl;
 extern crate glutin;
 
+#[macro_use]
+mod macros;
+
 mod mesh;
 mod shader;
+mod transform;
 mod vertex;
 
 use mesh::{Buffer, BufferType, VertexArray, VertexAttrib};
 use shader::{Program, Shader, ShaderStage};
+use transform::Transform;
 use vertex::Vertex;
 
 use glutin::{ContextBuilder, Event, EventsLoop, GlContext, GlWindow, WindowBuilder, WindowEvent};
 
-// Vertex data
-
 // Shader sources
-static VS_SRC: &'static str = include_str!("triangle.vs");
-static FS_SRC: &'static str = include_str!("triangle.fs");
+static VS_SRC: &'static str = include_res_str!("triangle.vs");
+static FS_SRC: &'static str = include_res_str!("triangle.fs");
 
 fn main() {
     let mut events_loop = EventsLoop::new();
