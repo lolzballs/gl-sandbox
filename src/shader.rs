@@ -11,7 +11,8 @@ pub struct Program {
 
 impl Program {
     pub fn from_shaders<'a, I>(shaders: I) -> Self
-        where I: IntoIterator<Item = &'a Shader>
+    where
+        I: IntoIterator<Item = &'a Shader>,
     {
         let program = unsafe {
             let program = gl::CreateProgram();
@@ -30,19 +31,39 @@ impl Program {
                 gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
                 let mut buf = Vec::with_capacity(len as usize);
                 buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
-                gl::GetProgramInfoLog(program,
-                                      len,
-                                      ptr::null_mut(),
-                                      buf.as_mut_ptr() as *mut GLchar);
-                panic!("{}",
-                       str::from_utf8(&buf)
-                           .ok()
-                           .expect("ProgramInfoLog not valid utf8"));
+                gl::GetProgramInfoLog(
+                    program,
+                    len,
+                    ptr::null_mut(),
+                    buf.as_mut_ptr() as *mut GLchar,
+                );
+                panic!(
+                    "{}",
+                    str::from_utf8(&buf)
+                        .ok()
+                        .expect("ProgramInfoLog not valid utf8",)
+                );
             }
             program
         };
 
         Program { id: program }
+    }
+
+    pub fn bind(&self) {
+        unsafe { gl::UseProgram(self.id) }
+    }
+
+    pub fn unbind(&self) {
+        unsafe { gl::UseProgram(0) }
+    }
+}
+
+impl Drop for Program {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteProgram(self.id);
+        }
     }
 }
 
@@ -53,10 +74,7 @@ pub struct Shader {
 
 impl Shader {
     pub fn from_source(stage: ShaderStage, source: &str) -> Self {
-        Self::compile_source(ShaderSource {
-                                 stage: stage,
-                                 src: source,
-                             })
+        Self::compile_source(ShaderSource::new(stage, source))
     }
 
     pub fn compile_source<'a>(source: ShaderSource<'a>) -> Self {
@@ -75,20 +93,32 @@ impl Shader {
                 gl::GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut len);
                 let mut buf = Vec::with_capacity(len as usize);
                 buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
-                gl::GetShaderInfoLog(shader,
-                                     len,
-                                     ptr::null_mut(),
-                                     buf.as_mut_ptr() as *mut GLchar);
-                panic!("{}",
-                       str::from_utf8(&buf)
-                           .ok()
-                           .expect("ShaderInfoLog not valid utf8"));
+                gl::GetShaderInfoLog(
+                    shader,
+                    len,
+                    ptr::null_mut(),
+                    buf.as_mut_ptr() as *mut GLchar,
+                );
+                panic!(
+                    "{}",
+                    str::from_utf8(&buf)
+                        .ok()
+                        .expect("ShaderInfoLog not valid utf8",)
+                );
             }
             shader
         };
         Shader {
             stage: source.stage,
             id: id,
+        }
+    }
+}
+
+impl Drop for Shader {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteShader(self.id);
         }
     }
 }

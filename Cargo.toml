@@ -1,8 +1,9 @@
 [package]
-name = "hexgame"
+name = "gl-sandbox"
 version = "0.1.0"
 authors = ["Benjamin Cheng <ben@bcheng.cf>"]
 
 [dependencies]
-gl = "0.6"
-sdl2 = "0.30"
+cgmath = "0.16"
+gl = "0.9"
+glutin = "0.12"
