@@ -30,7 +30,7 @@ fn main() {
         gl::ClearColor(0.0, 0.0, 0.0, 1.0);
     }
 
-    let mesh = {
+    let vbo = {
         let verticies: [Vertex; 3] = [
             Vertex {
                 position: [0.0, 0.5, 0.0].into(),
@@ -49,9 +49,16 @@ fn main() {
             },
         ];
 
-        let mesh = Buffer::new(BufferType::Vertex);
-        mesh.buffer_verticies(&verticies);
-        mesh
+        let vbo = Buffer::new(BufferType::Vertex);
+        vbo.buffer_verticies(&verticies);
+        vbo
+    };
+
+    let indicies = [0, 1, 2];
+    let ibo = {
+        let ibo = Buffer::new(BufferType::Index);
+        ibo.buffer_indicies(&indicies);
+        ibo
     };
 
     let program = Program::from_shaders(&[
@@ -60,19 +67,20 @@ fn main() {
     ]);
 
     let vao = VertexArray::new(
-        mesh,
+        vbo,
+        Some(ibo),
         &[
             VertexAttrib {
                 location: 0,
                 size: 3,
                 stride: vertex::consts::SIZE as i32,
-                start: 0,
+                start: vertex::consts::POSITION_START,
             },
             VertexAttrib {
                 location: 1,
                 size: 4,
                 stride: vertex::consts::SIZE as i32,
-                start: 12,
+                start: vertex::consts::COLOR_START,
             },
         ],
     );
@@ -92,7 +100,7 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        vao.draw_arrays(&program, gl::TRIANGLES, 0, 3);
+        vao.draw(&program, gl::TRIANGLES, 0, indicies.len());
         gl_window.swap_buffers().unwrap();
     }
 }

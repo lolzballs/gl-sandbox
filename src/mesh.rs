@@ -16,19 +16,23 @@ pub struct VertexAttrib {
 pub struct VertexArray {
     id: GLuint,
     vbo: Buffer,
+    ibo: Option<Buffer>,
 }
 
 impl VertexArray {
-    pub fn new(vbo: Buffer, attribs: &[VertexAttrib]) -> Self {
+    pub fn new(vbo: Buffer, ibo: Option<Buffer>, attribs: &[VertexAttrib]) -> Self {
         let vao = unsafe {
             let mut id = 0;
             gl::GenVertexArrays(1, &mut id);
 
-            VertexArray { id, vbo }
+            VertexArray { id, vbo, ibo }
         };
 
         vao.bind();
         vao.vbo.bind();
+        if let Some(ref ibo) = vao.ibo {
+            ibo.bind();
+        }
         for a in attribs {
             vao.vertex_attrib_pointer(a.location, a.size, a.stride, a.start);
         }
@@ -63,11 +67,19 @@ impl VertexArray {
         }
     }
 
-    pub fn draw_arrays(&self, program: &Program, prim: GLenum, start: GLint, len: GLsizei) {
+    pub fn draw(&self, program: &Program, prim: GLenum, start: GLint, len: usize) {
         self.bind();
         program.bind();
         unsafe {
-            gl::DrawArrays(prim, start, len);
+            match self.ibo {
+                Some(_) => gl::DrawElements(
+                    prim,
+                    len as GLsizei,
+                    gl::UNSIGNED_SHORT,
+                    start as *const i32 as *const _,
+                ),
+                None => gl::DrawArrays(prim, start, len as GLsizei),
+            }
         }
         program.unbind();
         self.unbind();
@@ -119,7 +131,7 @@ impl Buffer {
         self.unbind();
     }
 
-    pub fn buffer_indicies(&self, indicies: &[usize]) {
+    pub fn buffer_indicies(&self, indicies: &[u16]) {
         assert!(self.ty == BufferType::Index);
 
         self.bind();
@@ -127,7 +139,7 @@ impl Buffer {
             gl::BufferData(
                 self.ty.into(),
                 mem::size_of_val(indicies) as GLsizeiptr,
-                mem::transmute(&indicies[0]),
+                indicies.as_ptr() as *const _,
                 gl::STATIC_DRAW,
             )
         }

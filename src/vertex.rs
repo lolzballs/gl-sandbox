@@ -3,6 +3,10 @@ use cgmath::{Vector2, Vector3, Vector4};
 pub mod consts {
     pub const SIZE_F32: usize = 12;
     pub const SIZE: usize = SIZE_F32 * 4;
+    pub const POSITION_START: usize = 0;
+    pub const COLOR_START: usize = 3 * 4;
+    pub const TEXCOORD_START: usize = 7 * 4;
+    pub const NORMAL_START: usize = 9 * 4;
 }
 
 pub struct Vertex {
