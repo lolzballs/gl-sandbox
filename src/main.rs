@@ -15,13 +15,17 @@ use shader::{Program, Shader, ShaderStage, UniformValue};
 use transform::Transform;
 use vertex::Vertex;
 
-use cgmath::Vector3;
+use cgmath::{Deg, Matrix4, Perspective, Vector3};
 use glutin::{ContextBuilder, Event, EventsLoop, GlContext, GlProfile, GlWindow, WindowBuilder,
              WindowEvent};
 
 // Shader sources
 static VS_SRC: &'static str = include_res_str!("triangle.vs");
 static FS_SRC: &'static str = include_res_str!("triangle.fs");
+
+fn update_perspective(w: u32, h: u32) -> Matrix4<f32> {
+    cgmath::perspective(Deg(7.0), w as f32 / h as f32, 0.001, 1000.0)
+}
 
 fn main() {
     let mut events_loop = EventsLoop::new();
@@ -30,6 +34,8 @@ fn main() {
         .with_gl_profile(GlProfile::Core)
         .with_vsync(true);
     let gl_window = GlWindow::new(window, context, &events_loop).expect("failed to create window");
+
+    let (mut width, mut height) = gl_window.window().get_inner_size().unwrap();
 
     unsafe {
         gl_window.make_current().unwrap();
@@ -76,9 +82,11 @@ fn main() {
     };
 
     let mut transform = Transform {
+        position: -10.0f32 * Vector3::unit_z(),
         scale: Vector3::new(0.5, 0.5, 0.5),
         ..Default::default()
     };
+    let mut perspective = update_perspective(width, height);
 
     let program = Program::from_shaders(&[
         Shader::from_source(ShaderStage::Vertex, VS_SRC),
@@ -102,6 +110,18 @@ fn main() {
                 stride: vertex::consts::SIZE as i32,
                 start: vertex::consts::COLOR_START,
             },
+            VertexAttrib {
+                location: 2,
+                size: 2,
+                stride: vertex::consts::SIZE as i32,
+                start: vertex::consts::TEXCOORD_START,
+            },
+            VertexAttrib {
+                location: 3,
+                size: 3,
+                stride: vertex::consts::SIZE as i32,
+                start: vertex::consts::NORMAL_START,
+            },
         ],
     );
 
@@ -112,6 +132,9 @@ fn main() {
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::Closed => running = false,
                 WindowEvent::Resized(w, h) => {
+                    width = w;
+                    height = h;
+                    perspective = update_perspective(w, h);
                     unsafe {
                         gl::Viewport(0, 0, w as i32, h as i32);
                     }
@@ -126,7 +149,9 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        active_program.uniform(u_mvp, UniformValue::Matrix4(transform.into()));
+        let transform: Matrix4<f32> = transform.into();
+        let mvp = perspective * transform;
+        active_program.uniform(u_mvp, UniformValue::Matrix4(mvp));
         vao.draw(&active_program, gl::TRIANGLES, 0, indicies.len());
 
         gl_window.swap_buffers().unwrap();
