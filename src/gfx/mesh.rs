@@ -1,6 +1,6 @@
 use std::mem;
 
-use shader::ActiveProgram;
+use gfx::shader::ActiveProgram;
 
 use gl;
 use gl::types::*;
@@ -30,6 +30,7 @@ impl VertexArray {
         {
             let active = vao.bind();
 
+            // Don't unbind in the vao setup
             mem::forget(vao.vbo.bind());
             if let Some(ref ibo) = vao.ibo {
                 mem::forget(ibo.bind());

@@ -5,15 +5,14 @@ extern crate glutin;
 #[macro_use]
 mod macros;
 
-mod mesh;
-mod shader;
+mod gfx;
 mod transform;
 mod vertex;
 
 use std::mem;
 
-use mesh::{Buffer, BufferType, VertexArray, VertexAttrib};
-use shader::{Program, Shader, ShaderStage, UniformValue};
+use gfx::mesh::{Buffer, BufferType, VertexArray, VertexAttrib};
+use gfx::shader::{Program, Shader, ShaderStage, UniformValue};
 use transform::Transform;
 use vertex::Vertex;
 
