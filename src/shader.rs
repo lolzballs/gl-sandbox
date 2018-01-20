@@ -2,8 +2,13 @@ use std::ffi::CString;
 use std::ptr;
 use std::str;
 
+use cgmath::{Matrix, Matrix4};
 use gl;
 use gl::types::*;
+
+pub enum UniformValue {
+    Matrix4(Matrix4<f32>),
+}
 
 pub struct Program {
     pub id: GLuint,
@@ -50,12 +55,15 @@ impl Program {
         Program { id: program }
     }
 
-    pub fn bind(&self) {
-        unsafe { gl::UseProgram(self.id) }
+    pub fn bind(&self) -> ActiveProgram {
+        ActiveProgram::new(self)
     }
 
-    pub fn unbind(&self) {
-        unsafe { gl::UseProgram(0) }
+    pub fn get_uniform_location(&self, name: &str) -> GLint {
+        unsafe {
+            let c_str = CString::new(name.as_bytes()).unwrap();
+            gl::GetUniformLocation(self.id, c_str.as_ptr())
+        }
     }
 }
 
@@ -64,6 +72,33 @@ impl Drop for Program {
         unsafe {
             gl::DeleteProgram(self.id);
         }
+    }
+}
+
+pub struct ActiveProgram<'a> {
+    program: &'a Program,
+}
+
+impl<'a> ActiveProgram<'a> {
+    fn new(program: &'a Program) -> Self {
+        unsafe { gl::UseProgram(program.id) }
+        ActiveProgram { program }
+    }
+
+    pub fn uniform(&self, location: GLint, val: UniformValue) {
+        unsafe {
+            match val {
+                UniformValue::Matrix4(mat4) => {
+                    gl::UniformMatrix4fv(location, 1, gl::FALSE, mat4.as_ptr())
+                }
+            }
+        }
+    }
+}
+
+impl<'a> Drop for ActiveProgram<'a> {
+    fn drop(&mut self) {
+        unsafe { gl::UseProgram(0) }
     }
 }
 

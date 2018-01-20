@@ -1,6 +1,6 @@
 use std::mem;
 
-use shader::Program;
+use shader::ActiveProgram;
 use vertex::Vertex;
 
 use gl;
@@ -67,9 +67,8 @@ impl VertexArray {
         }
     }
 
-    pub fn draw(&self, program: &Program, prim: GLenum, start: GLint, len: usize) {
+    pub fn draw(&self, _: &ActiveProgram, prim: GLenum, start: GLint, len: usize) {
         self.bind();
-        program.bind();
         unsafe {
             match self.ibo {
                 Some(_) => gl::DrawElements(
@@ -81,7 +80,6 @@ impl VertexArray {
                 None => gl::DrawArrays(prim, start, len as GLsizei),
             }
         }
-        program.unbind();
         self.unbind();
     }
 }
