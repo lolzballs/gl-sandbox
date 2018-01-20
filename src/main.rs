@@ -10,12 +10,14 @@ mod shader;
 mod transform;
 mod vertex;
 
+use std::mem;
+
 use mesh::{Buffer, BufferType, VertexArray, VertexAttrib};
 use shader::{Program, Shader, ShaderStage, UniformValue};
 use transform::Transform;
 use vertex::Vertex;
 
-use cgmath::{Deg, Matrix4, Perspective, Vector3};
+use cgmath::{Deg, Matrix4, Vector3};
 use glutin::{ContextBuilder, Event, EventsLoop, GlContext, GlProfile, GlWindow, WindowBuilder,
              WindowEvent};
 
@@ -70,14 +72,19 @@ fn main() {
         ];
 
         let vbo = Buffer::new(BufferType::Vertex);
-        vbo.buffer_verticies(&verticies);
+        vbo.bind().buffer(&Vertex::into_bytes(&verticies));
         vbo
     };
 
-    let indicies = [0, 1, 2, 2, 1, 3];
+    let indicies = [0u16, 1, 2, 2, 1, 3];
     let ibo = {
         let ibo = Buffer::new(BufferType::Index);
-        ibo.buffer_indicies(&indicies);
+        unsafe {
+            ibo.bind().buffer(std::slice::from_raw_parts(
+                indicies.as_ptr() as *const u8,
+                mem::size_of_val(&indicies),
+            ))
+        }
         ibo
     };
 
@@ -152,7 +159,8 @@ fn main() {
         let transform: Matrix4<f32> = transform.into();
         let mvp = perspective * transform;
         active_program.uniform(u_mvp, UniformValue::Matrix4(mvp));
-        vao.draw(&active_program, gl::TRIANGLES, 0, indicies.len());
+        vao.bind()
+            .draw(&active_program, gl::TRIANGLES, 0, indicies.len());
 
         gl_window.swap_buffers().unwrap();
     }

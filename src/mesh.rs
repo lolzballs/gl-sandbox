@@ -1,7 +1,6 @@
 use std::mem;
 
 use shader::ActiveProgram;
-use vertex::Vertex;
 
 use gl;
 use gl::types::*;
@@ -28,29 +27,40 @@ impl VertexArray {
             VertexArray { id, vbo, ibo }
         };
 
-        vao.bind();
-        vao.vbo.bind();
-        if let Some(ref ibo) = vao.ibo {
-            ibo.bind();
+        {
+            let active = vao.bind();
+
+            mem::forget(vao.vbo.bind());
+            if let Some(ref ibo) = vao.ibo {
+                mem::forget(ibo.bind());
+            }
+            for a in attribs {
+                active.vertex_attrib_pointer(a.location, a.size, a.stride, a.start);
+            }
         }
-        for a in attribs {
-            vao.vertex_attrib_pointer(a.location, a.size, a.stride, a.start);
-        }
-        vao.unbind();
 
         vao
     }
 
-    fn bind(&self) {
-        unsafe {
-            gl::BindVertexArray(self.id);
-        }
+    pub fn bind(&self) -> ActiveVAO {
+        ActiveVAO::new(self)
     }
+}
 
-    fn unbind(&self) {
-        unsafe {
-            gl::BindVertexArray(0);
-        }
+impl Drop for VertexArray {
+    fn drop(&mut self) {
+        unsafe { gl::DeleteVertexArrays(1, &self.id) }
+    }
+}
+
+pub struct ActiveVAO<'a> {
+    vao: &'a VertexArray,
+}
+
+impl<'a> ActiveVAO<'a> {
+    fn new(vao: &'a VertexArray) -> Self {
+        unsafe { gl::BindVertexArray(vao.id) }
+        ActiveVAO { vao }
     }
 
     fn vertex_attrib_pointer(&self, location: GLuint, size: GLint, stride: GLsizei, start: usize) {
@@ -68,9 +78,8 @@ impl VertexArray {
     }
 
     pub fn draw(&self, _: &ActiveProgram, prim: GLenum, start: GLint, len: usize) {
-        self.bind();
         unsafe {
-            match self.ibo {
+            match self.vao.ibo {
                 Some(_) => gl::DrawElements(
                     prim,
                     len as GLsizei,
@@ -80,15 +89,12 @@ impl VertexArray {
                 None => gl::DrawArrays(prim, start, len as GLsizei),
             }
         }
-        self.unbind();
     }
 }
 
-impl Drop for VertexArray {
+impl<'a> Drop for ActiveVAO<'a> {
     fn drop(&mut self) {
-        unsafe {
-            gl::DeleteVertexArrays(1, &self.id);
-        }
+        unsafe { gl::BindVertexArray(0) }
     }
 }
 
@@ -106,42 +112,8 @@ impl Buffer {
         }
     }
 
-    fn bind(&self) {
-        unsafe { gl::BindBuffer(self.ty.into(), self.id) }
-    }
-
-    fn unbind(&self) {
-        unsafe { gl::BindBuffer(self.ty.into(), 0) }
-    }
-
-    pub fn buffer_verticies(&self, verticies: &[Vertex]) {
-        assert!(self.ty == BufferType::Vertex);
-
-        self.bind();
-        unsafe {
-            gl::BufferData(
-                self.ty.into(),
-                mem::size_of_val(verticies) as GLsizeiptr,
-                Vertex::into_bytes(verticies).as_ptr() as *const _,
-                gl::STATIC_DRAW,
-            )
-        }
-        self.unbind();
-    }
-
-    pub fn buffer_indicies(&self, indicies: &[u16]) {
-        assert!(self.ty == BufferType::Index);
-
-        self.bind();
-        unsafe {
-            gl::BufferData(
-                self.ty.into(),
-                mem::size_of_val(indicies) as GLsizeiptr,
-                indicies.as_ptr() as *const _,
-                gl::STATIC_DRAW,
-            )
-        }
-        self.unbind();
+    pub fn bind(&self) -> ActiveBuffer {
+        ActiveBuffer::new(self)
     }
 }
 
@@ -150,6 +122,34 @@ impl Drop for Buffer {
         unsafe {
             gl::DeleteBuffers(1, &self.id);
         }
+    }
+}
+
+pub struct ActiveBuffer<'a> {
+    buffer: &'a Buffer,
+}
+
+impl<'a> ActiveBuffer<'a> {
+    fn new(buffer: &'a Buffer) -> Self {
+        unsafe { gl::BindBuffer(buffer.ty.into(), buffer.id) }
+        ActiveBuffer { buffer }
+    }
+
+    pub fn buffer(&self, data: &[u8]) {
+        unsafe {
+            gl::BufferData(
+                self.buffer.ty.into(),
+                mem::size_of_val(data) as GLsizeiptr,
+                data.as_ptr() as *const _,
+                gl::STATIC_DRAW,
+            )
+        }
+    }
+}
+
+impl<'a> Drop for ActiveBuffer<'a> {
+    fn drop(&mut self) {
+        unsafe { gl::BindBuffer(self.buffer.ty.into(), 0) }
     }
 }
 
