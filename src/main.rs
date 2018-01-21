@@ -171,10 +171,10 @@ fn main() {
     let u_mvp = program.get_uniform_location("mvp");
     let u_tex = program.get_uniform_location("tex");
 
-    let texture_unit = TextureUnit::new(1);
-    let active_texture_unit = texture_unit.bind();
-    let texture = Texture::new(&active_texture_unit, PNGDecoder::new(Cursor::new(TEST_PNG)));
-    let active_tex = texture.bind(&active_texture_unit);
+    let mut texture_unit = TextureUnit::take(1).unwrap();
+    texture_unit.replace_texture(Texture::new());
+    let active_tex = texture_unit.bind_texture().unwrap();
+    active_tex.write(PNGDecoder::new(Cursor::new(TEST_PNG)));
     active_tex.set_minify_filter(MinifyFilter::Linear);
     active_tex.set_magnify_filter(MagnifyFilter::Linear);
     active_tex.set_wrap_function((WrapFunction::Repeat, WrapFunction::Repeat));

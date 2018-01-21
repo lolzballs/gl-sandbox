@@ -1,33 +1,39 @@
+use std::mem;
+
 use gl;
 use gl::types::*;
 use image::{ColorType, DecodingResult, ImageDecoder};
 
+static mut TEXTURE_UNITS: [bool; 256] = [false; 256];
+
 pub struct TextureUnit {
     id: u32,
+    bound_texture: Option<Texture>,
 }
 
 impl TextureUnit {
-    pub fn new(id: u32) -> Self {
-        TextureUnit { id }
+    pub fn take(id: u32) -> Option<Self> {
+        if unsafe { TEXTURE_UNITS[id as usize] } {
+            None
+        } else {
+            Some(TextureUnit {
+                id,
+                bound_texture: None,
+            })
+        }
+    }
+
+    pub fn replace_texture(&mut self, tex: Texture) -> Option<Texture> {
+        mem::replace(&mut self.bound_texture, Some(tex))
+    }
+
+    pub fn bind_texture(&self) -> Option<ActiveTexture> {
+        unsafe { gl::ActiveTexture(gl::TEXTURE0 + self.id) }
+        self.bound_texture.as_ref().map(|t| t.bind())
     }
 
     pub fn id(&self) -> i32 {
         self.id as i32
-    }
-
-    pub fn bind(&self) -> ActiveTextureUnit {
-        ActiveTextureUnit::new(self)
-    }
-}
-
-pub struct ActiveTextureUnit<'a> {
-    unit: &'a TextureUnit,
-}
-
-impl<'a> ActiveTextureUnit<'a> {
-    fn new(unit: &'a TextureUnit) -> Self {
-        unsafe { gl::ActiveTexture(gl::TEXTURE0 + unit.id) }
-        ActiveTextureUnit { unit }
     }
 }
 
@@ -36,20 +42,16 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn new<I>(unit: &ActiveTextureUnit, image: I) -> Self
-    where
-        I: ImageDecoder,
-    {
+    pub fn new() -> Self {
         let texture = unsafe {
             let mut id = 0;
             gl::GenTextures(1, &mut id);
             Texture { id }
         };
-        texture.bind(unit).write(image);
         texture
     }
 
-    pub fn bind(&self, _: &ActiveTextureUnit) -> ActiveTexture {
+    fn bind(&self) -> ActiveTexture {
         ActiveTexture::new(self)
     }
 }
@@ -85,7 +87,7 @@ impl<'a> ActiveTexture<'a> {
         unsafe { gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, filter.into()) }
     }
 
-    fn write<I>(&self, mut image: I)
+    pub fn write<I>(&self, mut image: I)
     where
         I: ImageDecoder,
     {
