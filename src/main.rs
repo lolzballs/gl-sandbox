@@ -1,6 +1,7 @@
 extern crate cgmath;
 extern crate gl;
 extern crate glutin;
+extern crate image;
 
 #[macro_use]
 mod macros;
@@ -12,12 +13,14 @@ mod transform;
 mod mesh;
 mod vertex;
 
+use std::io::{Cursor, Read};
 use std::mem;
 
 use camera::Camera;
 use input::{KeyState, MouseState};
 use gfx::buffer::{Buffer, BufferType};
 use gfx::shader::{Program, Shader, ShaderStage, UniformValue};
+use gfx::texture::{MagnifyFilter, MinifyFilter, Texture, WrapFunction};
 use gfx::vertex_array::{VertexArray, VertexAttrib};
 use transform::Transform;
 use mesh::{DrawMode, Mesh};
@@ -26,10 +29,14 @@ use vertex::Vertex;
 use cgmath::{Deg, Matrix4, Vector3};
 use glutin::{ContextBuilder, CursorState, ElementState, Event, EventsLoop, GlContext, GlProfile,
              GlWindow, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowBuilder, WindowEvent};
+use image::{DecodingResult, ImageDecoder};
+use image::png::PNGDecoder;
 
 // Shader sources
 static VS_SRC: &'static str = include_res_str!("triangle.vs");
 static FS_SRC: &'static str = include_res_str!("triangle.fs");
+
+static TEST_PNG: &'static [u8] = include_res!("test.png");
 
 fn update_perspective(w: u32, h: u32) -> Matrix4<f32> {
     cgmath::perspective(Deg(70.0), w as f32 / h as f32, 0.001, 1000.0)
@@ -46,7 +53,7 @@ fn main() {
     let (mut width, mut height) = gl_window.window().get_inner_size().unwrap();
     gl_window
         .window()
-        .set_cursor_state(CursorState::Hide)
+        .set_cursor_state(CursorState::Grab)
         .expect("could not grab cursor");
 
     unsafe {
@@ -57,27 +64,33 @@ fn main() {
         gl::ClearColor(0.0, 0.0, 0.0, 1.0);
     }
 
+    let texture = { Texture::new(PNGDecoder::new(Cursor::new(TEST_PNG))) };
+
     let mesh = {
         let vbo = {
             let verticies = [
                 Vertex {
                     position: [-0.5, 0.5, 0.0].into(),
                     color: [1.0, 0.0, 0.0, 1.0].into(),
+                    tex_coord: [0.0, 0.0].into(),
                     ..Default::default()
                 },
                 Vertex {
                     position: [0.5, 0.5, 0.0].into(),
                     color: [0.0, 1.0, 0.0, 1.0].into(),
+                    tex_coord: [1.0, 0.0].into(),
                     ..Default::default()
                 },
                 Vertex {
                     position: [-0.5, -0.5, 0.0].into(),
                     color: [0.0, 0.0, 1.0, 1.0].into(),
+                    tex_coord: [0.0, 1.0].into(),
                     ..Default::default()
                 },
                 Vertex {
                     position: [0.5, -0.5, 0.0].into(),
                     color: [1.0, 1.0, 1.0, 1.0].into(),
+                    tex_coord: [1.0, 1.0].into(),
                     ..Default::default()
                 },
             ];
@@ -156,8 +169,15 @@ fn main() {
         Shader::from_source(ShaderStage::Fragment, FS_SRC),
     ]);
     let u_mvp = program.get_uniform_location("mvp");
+    let u_tex = program.get_uniform_location("tex");
 
     let active_program = program.bind();
+    active_program.uniform(u_tex, UniformValue::I1(0));
+    let active_tex = texture.bind();
+    active_tex.set_minify_filter(MinifyFilter::Linear);
+    active_tex.set_magnify_filter(MagnifyFilter::Linear);
+    active_tex.set_wrap_function((WrapFunction::Repeat, WrapFunction::Repeat));
+
     let mut running = true;
     while running {
         key_state = KeyState::from_last_frame(key_state);
@@ -217,11 +237,17 @@ fn main() {
         camera.rotation.1 += mouse_state.position.0 as f32 / 10.0;
         if mouse_state.pressed.contains(&MouseButton::Left) {
             grabbed = true;
-            gl_window.window().set_cursor_state(CursorState::Hide).unwrap();
+            gl_window
+                .window()
+                .set_cursor_state(CursorState::Hide)
+                .unwrap();
         }
         if key_state.pressed.contains(&VirtualKeyCode::Escape) {
             grabbed = false;
-            gl_window.window().set_cursor_state(CursorState::Normal).unwrap();
+            gl_window
+                .window()
+                .set_cursor_state(CursorState::Normal)
+                .unwrap();
         }
         if key_state.down.contains(&VirtualKeyCode::W) {
             camera.position += camera.get_forward() * 0.1;

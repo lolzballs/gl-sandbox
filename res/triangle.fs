@@ -1,8 +1,13 @@
 #version 330 core
 
-varying vec4 color0;
 out vec4 out_color;
 
+varying vec4 color0;
+varying vec2 tex_coord0;
+
+uniform sampler2D tex;
+
 void main() {
-    out_color = color0;
+    vec4 color = texture(tex, tex_coord0);
+    out_color = mix(color, color0, 0.5);
 }

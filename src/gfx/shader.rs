@@ -8,6 +8,7 @@ use gl::types::*;
 
 pub enum UniformValue {
     Matrix4(Matrix4<f32>),
+    I1(i32),
 }
 
 pub struct Program {
@@ -91,6 +92,7 @@ impl<'a> ActiveProgram<'a> {
                 UniformValue::Matrix4(mat4) => {
                     gl::UniformMatrix4fv(location, 1, gl::FALSE, mat4.as_ptr())
                 }
+                UniformValue::I1(i) => gl::Uniform1i(location, i),
             }
         }
     }

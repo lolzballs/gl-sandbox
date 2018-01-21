@@ -7,3 +7,4 @@ authors = ["Benjamin Cheng <ben@bcheng.cf>"]
 cgmath = "0.16"
 gl = "0.9"
 glutin = "0.12"
+image = "0.18"
