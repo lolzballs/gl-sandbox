@@ -25,7 +25,7 @@ use vertex::Vertex;
 
 use cgmath::{Deg, Matrix4, Vector3};
 use glutin::{ContextBuilder, CursorState, ElementState, Event, EventsLoop, GlContext, GlProfile,
-             GlWindow, MouseScrollDelta, VirtualKeyCode, WindowBuilder, WindowEvent};
+             GlWindow, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowBuilder, WindowEvent};
 
 // Shader sources
 static VS_SRC: &'static str = include_res_str!("triangle.vs");
@@ -141,6 +141,7 @@ fn main() {
         }
     };
 
+    let mut grabbed = true;
     let mut key_state = KeyState::new();
     let mut mouse_state = MouseState::new();
 
@@ -189,13 +190,15 @@ fn main() {
                 WindowEvent::CursorMoved {
                     position: (x, y), ..
                 } => {
-                    let half_width = width as f64 / 2.0;
-                    let half_height = height as f64 / 2.0;
-                    mouse_state.position = ((half_width - x) as i32, (half_height - y) as i32);
-                    gl_window
-                        .window()
-                        .set_cursor_position(half_width as i32, half_height as i32)
-                        .expect("could not set cursor position");
+                    if grabbed {
+                        let half_width = width as f64 / 2.0;
+                        let half_height = height as f64 / 2.0;
+                        mouse_state.position = ((half_width - x) as i32, (half_height - y) as i32);
+                        gl_window
+                            .window()
+                            .set_cursor_position(half_width as i32, half_height as i32)
+                            .expect("could not set cursor position");
+                    }
                 }
                 WindowEvent::MouseInput { state, button, .. } => match state {
                     ElementState::Pressed => mouse_state.pressed(button),
@@ -212,6 +215,14 @@ fn main() {
 
         camera.rotation.0 += mouse_state.position.1 as f32 / 10.0;
         camera.rotation.1 += mouse_state.position.0 as f32 / 10.0;
+        if mouse_state.pressed.contains(&MouseButton::Left) {
+            grabbed = true;
+            gl_window.window().set_cursor_state(CursorState::Hide).unwrap();
+        }
+        if key_state.pressed.contains(&VirtualKeyCode::Escape) {
+            grabbed = false;
+            gl_window.window().set_cursor_state(CursorState::Normal).unwrap();
+        }
         if key_state.down.contains(&VirtualKeyCode::W) {
             camera.position += camera.get_forward() * 0.1;
         }
@@ -223,6 +234,12 @@ fn main() {
         }
         if key_state.down.contains(&VirtualKeyCode::D) {
             camera.position += camera.get_right() * 0.1;
+        }
+        if key_state.down.contains(&VirtualKeyCode::Space) {
+            camera.position += camera::UP * 0.1;
+        }
+        if key_state.down.contains(&VirtualKeyCode::LShift) {
+            camera.position -= camera::UP * 0.1;
         }
 
         unsafe {

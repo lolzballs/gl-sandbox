@@ -1,6 +1,6 @@
 use cgmath::{Deg, Euler, Matrix4, Quaternion, Rotation, Rotation3, Vector3};
 
-const UP: Vector3<f32> = Vector3 {
+pub const UP: Vector3<f32> = Vector3 {
     x: 0.0,
     y: 1.0,
     z: 0.0,
