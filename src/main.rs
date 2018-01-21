@@ -27,8 +27,9 @@ use mesh::{DrawMode, Mesh};
 use vertex::Vertex;
 
 use cgmath::{Deg, Matrix4, Vector3};
-use glutin::{ContextBuilder, CursorState, ElementState, Event, EventsLoop, GlContext, GlProfile,
-             GlWindow, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowBuilder, WindowEvent};
+use glutin::{ContextBuilder, CursorState, DeviceEvent, ElementState, Event, EventsLoop, GlContext,
+             GlProfile, GlWindow, MouseButton, MouseCursor, MouseScrollDelta, VirtualKeyCode,
+             WindowBuilder, WindowEvent};
 use image::{DecodingResult, ImageDecoder};
 use image::png::PNGDecoder;
 
@@ -51,6 +52,7 @@ fn main() {
     let gl_window = GlWindow::new(window, context, &events_loop).expect("failed to create window");
 
     let (mut width, mut height) = gl_window.window().get_inner_size().unwrap();
+    gl_window.window().set_cursor(MouseCursor::NoneCursor);
     gl_window
         .window()
         .set_cursor_state(CursorState::Grab)
@@ -207,43 +209,41 @@ fn main() {
                     ElementState::Pressed => key_state.pressed(vk),
                     ElementState::Released => key_state.released(vk),
                 },
-                WindowEvent::CursorMoved {
-                    position: (x, y), ..
-                } => {
-                    if grabbed {
-                        let half_width = width as f64 / 2.0;
-                        let half_height = height as f64 / 2.0;
-                        mouse_state.position = ((half_width - x) as i32, (half_height - y) as i32);
-                        gl_window
-                            .window()
-                            .set_cursor_position(half_width as i32, half_height as i32)
-                            .expect("could not set cursor position");
-                    }
-                }
                 WindowEvent::MouseInput { state, button, .. } => match state {
                     ElementState::Pressed => mouse_state.pressed(button),
                     ElementState::Released => mouse_state.released(button),
                 },
-                WindowEvent::MouseWheel {
+                _ => (),
+            },
+            Event::DeviceEvent { event, .. } => match event {
+                DeviceEvent::MouseMotion { delta: (x, y) } => {
+                    if grabbed {
+                        mouse_state.position = (-x as i32, -y as i32);
+                    }
+                }
+                DeviceEvent::MouseWheel {
                     delta: MouseScrollDelta::LineDelta(_, y),
-                    ..
                 } => mouse_state.mouse_wheel_delta = (y * 100.0) as i32,
                 _ => (),
             },
             _ => (),
         });
 
-        camera.rotation.0 += mouse_state.position.1 as f32 / 10.0;
-        camera.rotation.1 += mouse_state.position.0 as f32 / 10.0;
+        camera.rotation.0 += mouse_state.position.1 as f32 / 3.0;
+        camera.rotation.1 += mouse_state.position.0 as f32 / 3.0;
         if mouse_state.pressed.contains(&MouseButton::Left) {
             grabbed = true;
+
+            gl_window.window().set_cursor(MouseCursor::NoneCursor);
             gl_window
                 .window()
-                .set_cursor_state(CursorState::Hide)
+                .set_cursor_state(CursorState::Grab)
                 .unwrap();
         }
         if key_state.pressed.contains(&VirtualKeyCode::Escape) {
             grabbed = false;
+
+            gl_window.window().set_cursor(MouseCursor::Default);
             gl_window
                 .window()
                 .set_cursor_state(CursorState::Normal)
