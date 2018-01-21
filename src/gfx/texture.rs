@@ -21,7 +21,7 @@ impl TextureUnit {
 }
 
 pub struct ActiveTextureUnit<'a> {
-    unit: &'a TextureUnit
+    unit: &'a TextureUnit,
 }
 
 impl<'a> ActiveTextureUnit<'a> {

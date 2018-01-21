@@ -50,11 +50,11 @@ fn main() {
         .with_gl_profile(GlProfile::Core)
         .with_vsync(true);
     let gl_window = GlWindow::new(window, context, &events_loop).expect("failed to create window");
+    let window = gl_window.window();
 
-    let (mut width, mut height) = gl_window.window().get_inner_size().unwrap();
-    gl_window.window().set_cursor(MouseCursor::NoneCursor);
-    gl_window
-        .window()
+    let (mut width, mut height) = window.get_inner_size().unwrap();
+    window.set_cursor(MouseCursor::NoneCursor);
+    window
         .set_cursor_state(CursorState::Grab)
         .expect("could not grab cursor");
 
@@ -182,7 +182,6 @@ fn main() {
     let active_program = program.bind();
     active_program.uniform(u_tex, UniformValue::I1(texture_unit.id()));
 
-
     let mut running = true;
     while running {
         key_state = KeyState::from_last_frame(key_state);
@@ -236,21 +235,16 @@ fn main() {
         camera.rotation.1 += mouse_state.position.0 as f32 / 1.0;
         if mouse_state.pressed.contains(&MouseButton::Left) {
             grabbed = true;
-
-            gl_window.window().set_cursor(MouseCursor::NoneCursor);
-            gl_window
-                .window()
-                .set_cursor_state(CursorState::Grab)
-                .unwrap();
+            window.set_cursor(MouseCursor::NoneCursor);
+            // TODO: Fix this when https://github.com/tomaka/winit/pull/385 is merged
+            window.set_cursor_state(CursorState::Grab);
+            window.set_cursor_state(CursorState::Normal).unwrap();
+            window.set_cursor_state(CursorState::Grab).unwrap();
         }
         if key_state.pressed.contains(&VirtualKeyCode::Escape) {
             grabbed = false;
-
             gl_window.window().set_cursor(MouseCursor::Default);
-            gl_window
-                .window()
-                .set_cursor_state(CursorState::Normal)
-                .unwrap();
+            window.set_cursor_state(CursorState::Normal).unwrap();
         }
         if key_state.down.contains(&VirtualKeyCode::W) {
             camera.position += camera.get_forward() * 0.1;
