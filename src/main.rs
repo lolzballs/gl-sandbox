@@ -274,6 +274,10 @@ fn main() {
         active_program.uniform(u_mvp, UniformValue::Matrix4(mvp));
         mesh.draw(&active_program);
 
+        let mvp = perspective * camera.get_view_matrix();
+        active_program.uniform(u_mvp, UniformValue::Matrix4(mvp));
+        mesh.draw(&active_program);
+
         gl_window.swap_buffers().unwrap();
     }
 }
