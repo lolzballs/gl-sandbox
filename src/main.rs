@@ -20,7 +20,7 @@ use camera::Camera;
 use input::{KeyState, MouseState};
 use gfx::buffer::{Buffer, BufferType};
 use gfx::shader::{Program, Shader, ShaderStage, UniformValue};
-use gfx::texture::{MagnifyFilter, MinifyFilter, Texture, WrapFunction};
+use gfx::texture::{MagnifyFilter, MinifyFilter, Texture, TextureUnit, WrapFunction};
 use gfx::vertex_array::{VertexArray, VertexAttrib};
 use transform::Transform;
 use mesh::{DrawMode, Mesh};
@@ -65,8 +65,6 @@ fn main() {
         gl::FrontFace(gl::CW);
         gl::ClearColor(0.0, 0.0, 0.0, 1.0);
     }
-
-    let texture = { Texture::new(PNGDecoder::new(Cursor::new(TEST_PNG))) };
 
     let mesh = {
         let vbo = {
@@ -173,12 +171,17 @@ fn main() {
     let u_mvp = program.get_uniform_location("mvp");
     let u_tex = program.get_uniform_location("tex");
 
-    let active_program = program.bind();
-    active_program.uniform(u_tex, UniformValue::I1(0));
-    let active_tex = texture.bind();
+    let texture_unit = TextureUnit::new(1);
+    let active_texture_unit = texture_unit.bind();
+    let texture = Texture::new(&active_texture_unit, PNGDecoder::new(Cursor::new(TEST_PNG)));
+    let active_tex = texture.bind(&active_texture_unit);
     active_tex.set_minify_filter(MinifyFilter::Linear);
     active_tex.set_magnify_filter(MagnifyFilter::Linear);
     active_tex.set_wrap_function((WrapFunction::Repeat, WrapFunction::Repeat));
+
+    let active_program = program.bind();
+    active_program.uniform(u_tex, UniformValue::I1(texture_unit.id()));
+
 
     let mut running = true;
     while running {
@@ -229,8 +232,8 @@ fn main() {
             _ => (),
         });
 
-        camera.rotation.0 += mouse_state.position.1 as f32 / 3.0;
-        camera.rotation.1 += mouse_state.position.0 as f32 / 3.0;
+        camera.rotation.0 += mouse_state.position.1 as f32 / 1.0;
+        camera.rotation.1 += mouse_state.position.0 as f32 / 1.0;
         if mouse_state.pressed.contains(&MouseButton::Left) {
             grabbed = true;
 

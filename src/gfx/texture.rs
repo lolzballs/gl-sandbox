@@ -2,12 +2,41 @@ use gl;
 use gl::types::*;
 use image::{ColorType, DecodingResult, ImageDecoder};
 
+pub struct TextureUnit {
+    id: u32,
+}
+
+impl TextureUnit {
+    pub fn new(id: u32) -> Self {
+        TextureUnit { id }
+    }
+
+    pub fn id(&self) -> i32 {
+        self.id as i32
+    }
+
+    pub fn bind(&self) -> ActiveTextureUnit {
+        ActiveTextureUnit::new(self)
+    }
+}
+
+pub struct ActiveTextureUnit<'a> {
+    unit: &'a TextureUnit
+}
+
+impl<'a> ActiveTextureUnit<'a> {
+    fn new(unit: &'a TextureUnit) -> Self {
+        unsafe { gl::ActiveTexture(gl::TEXTURE0 + unit.id) }
+        ActiveTextureUnit { unit }
+    }
+}
+
 pub struct Texture {
     id: GLuint,
 }
 
 impl Texture {
-    pub fn new<I>(image: I) -> Self
+    pub fn new<I>(unit: &ActiveTextureUnit, image: I) -> Self
     where
         I: ImageDecoder,
     {
@@ -16,11 +45,11 @@ impl Texture {
             gl::GenTextures(1, &mut id);
             Texture { id }
         };
-        texture.bind().write(image);
+        texture.bind(unit).write(image);
         texture
     }
 
-    pub fn bind(&self) -> ActiveTexture {
+    pub fn bind(&self, _: &ActiveTextureUnit) -> ActiveTexture {
         ActiveTexture::new(self)
     }
 }

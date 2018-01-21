@@ -1,4 +1,4 @@
-use cgmath::{Deg, Euler, Matrix4, Quaternion, Rotation, Rotation3, Vector3};
+use cgmath::{Deg, Matrix4, Quaternion, Rotation, Rotation3, Vector3};
 
 pub const UP: Vector3<f32> = Vector3 {
     x: 0.0,
